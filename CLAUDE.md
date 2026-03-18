@@ -21,3 +21,8 @@ Docs/         -> 设计文档
 - Python 3.10+, Click (CLI), Rich (终端输出)
 - FastAPI + Uvicorn (可选 Web UI)
 - pytest + Ruff (测试 + 代码检查)
+
+## Workflow
+
+- 任何改动完成后必须 commit 并 push 同步到 GitHub 仓库
+- 仓库地址：https://github.com/CookiRui/claude-usage-analyzer
