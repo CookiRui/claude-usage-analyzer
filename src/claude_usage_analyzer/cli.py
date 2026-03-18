@@ -80,7 +80,8 @@ def render_rich(result: AnalysisResult, top: int = 10) -> None:
     # Summary
     console.print()
     console.print(f"[bold]Claude Usage Report[/bold]  ({period})")
-    console.print(f"Sessions: {result.total_sessions}  |  Messages: {result.total_messages}")
+    sub_info = f"  |  Subagents: {result.total_subagents}" if result.total_subagents else ""
+    console.print(f"Sessions: {result.total_sessions}  |  Messages: {result.total_messages}{sub_info}")
     console.print()
 
     # Token Summary
@@ -153,6 +154,21 @@ def render_rich(result: AnalysisResult, top: int = 10) -> None:
             t.add_row(sid, s.project, s.model or "", dur,
                        str(s.message_count), str(s.tool_call_count),
                        f"{s.total_tokens:,}")
+        console.print(t)
+        console.print()
+
+    # Subagent Distribution
+    if result.subagent_distribution:
+        t = Table(title="Subagent Distribution")
+        t.add_column("Agent Type", style="cyan")
+        t.add_column("Count", justify="right")
+        t.add_column("Total Tokens", justify="right")
+        t.add_column("Avg Tokens", justify="right")
+        t.add_column("Messages", justify="right")
+        t.add_column("%", justify="right", style="yellow")
+        for sa in result.subagent_distribution:
+            t.add_row(sa.agent_type, str(sa.count), f"{sa.total_tokens:,}",
+                       f"{sa.avg_tokens:,}", str(sa.total_messages), f"{sa.percentage}%")
         console.print(t)
         console.print()
 

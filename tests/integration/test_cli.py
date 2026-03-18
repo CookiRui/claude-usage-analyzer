@@ -20,6 +20,7 @@ class TestAnalyzeCommand:
         assert "Model Distribution" in result.output
         assert "Project Distribution" in result.output
         assert "Daily Trends" in result.output
+        assert "Subagent" in result.output
 
     def test_analyze_nonexistent_path(self):
         runner = CliRunner()

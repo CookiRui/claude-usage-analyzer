@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 
 
 @dataclass
@@ -110,7 +111,45 @@ class ParseResult:
     session_metas: list[SessionMeta] = field(default_factory=list)
     commands: list[CommandRecord] = field(default_factory=list)
     stats: StatsCache | None = None
+    subagents: list[SubagentTranscript] = field(default_factory=list)
     warnings: list[ParseWarning] = field(default_factory=list)
+
+
+# ============================================================
+# Subagent models
+# ============================================================
+
+
+@dataclass
+class SubagentFile:
+    jsonl_path: Path
+    meta_path: Path | None
+    session_id: str
+    project: str
+
+
+@dataclass
+class SubagentTranscript:
+    agent_id: str
+    session_id: str
+    project: str
+    agent_type: str
+    description: str
+    messages: list[Message] = field(default_factory=list)
+    total_tokens: TokenUsage = field(default_factory=TokenUsage)
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+    model: str | None = None
+
+
+@dataclass
+class SubagentDistribution:
+    agent_type: str
+    count: int = 0
+    total_tokens: int = 0
+    avg_tokens: int = 0
+    total_messages: int = 0
+    percentage: float = 0.0
 
 
 # ============================================================
@@ -184,6 +223,8 @@ class AnalysisResult:
     daily_trends: list[DailyTrend] = field(default_factory=list)
     session_overviews: list[SessionOverview] = field(default_factory=list)
     hourly_distribution: list[HourlyDistribution] = field(default_factory=list)
+    subagent_distribution: list[SubagentDistribution] = field(default_factory=list)
     total_sessions: int = 0
     total_messages: int = 0
+    total_subagents: int = 0
     analysis_period: tuple[str, str] = ("", "")

@@ -10,12 +10,14 @@ from claude_usage_analyzer.models import (
     SessionMeta,
     SessionTranscript,
     StatsCache,
+    SubagentFile,
 )
 from claude_usage_analyzer.parsers.discovery import DiscoveredLogs, LogDiscovery
 from claude_usage_analyzer.parsers.history import HistoryParser
 from claude_usage_analyzer.parsers.session_log import SessionLogParser
 from claude_usage_analyzer.parsers.session_meta import SessionMetaParser
 from claude_usage_analyzer.parsers.stats_cache import StatsCacheParser
+from claude_usage_analyzer.parsers.subagent import SubagentParser
 
 FIXTURES = Path(__file__).parent.parent / "fixtures"
 
@@ -201,6 +203,94 @@ class TestSessionLogParser:
 # parse_all integration
 # ============================================================
 
+SUBAGENT_DIR = FIXTURES / "projects" / "test-project" / "session-001" / "subagents"
+
+
+# ============================================================
+# LogDiscovery — subagent discovery
+# ============================================================
+
+class TestLogDiscoverySubagents:
+    def test_discover_finds_subagent_files(self):
+        discovery = LogDiscovery()
+        result = discovery.discover(FIXTURES)
+        assert len(result.subagent_files) >= 3  # abc123, def456, nometafile
+        agent_ids = {sf.jsonl_path.stem for sf in result.subagent_files}
+        assert "agent-abc123" in agent_ids
+        assert "agent-def456" in agent_ids
+
+    def test_meta_path_none_when_missing(self):
+        discovery = LogDiscovery()
+        result = discovery.discover(FIXTURES)
+        nometa = [sf for sf in result.subagent_files if "nometafile" in str(sf.jsonl_path)]
+        assert len(nometa) == 1
+        assert nometa[0].meta_path is None
+
+
+# ============================================================
+# SubagentParser
+# ============================================================
+
+class TestSubagentParser:
+    def _make_files(self) -> list[SubagentFile]:
+        discovery = LogDiscovery()
+        return discovery.discover(FIXTURES).subagent_files
+
+    def test_parse_meta(self):
+        parser = SubagentParser()
+        files = self._make_files()
+        subagents, warnings = parser.parse(files)
+        by_id = {sa.agent_id: sa for sa in subagents}
+        assert by_id["abc123"].agent_type == "Explore"
+        assert by_id["abc123"].description == "Research log format"
+        assert by_id["def456"].agent_type == "Plan"
+
+    def test_parse_messages_and_tokens(self):
+        parser = SubagentParser()
+        files = self._make_files()
+        subagents, warnings = parser.parse(files)
+        by_id = {sa.agent_id: sa for sa in subagents}
+        abc = by_id["abc123"]
+        assert len(abc.messages) == 4  # 2 user + 2 assistant
+        assert abc.total_tokens.input_tokens == 1300  # 800 + 500
+        assert abc.total_tokens.output_tokens == 230  # 150 + 80
+        assert abc.model == "claude-haiku-4-5-20251001"
+
+    def test_tool_calls_extracted(self):
+        parser = SubagentParser()
+        files = self._make_files()
+        subagents, warnings = parser.parse(files)
+        by_id = {sa.agent_id: sa for sa in subagents}
+        assistant_msgs = [m for m in by_id["abc123"].messages if m.role == "assistant"]
+        assert "Glob" in assistant_msgs[0].tool_calls
+
+    def test_meta_missing_uses_unknown(self):
+        parser = SubagentParser()
+        files = self._make_files()
+        subagents, warnings = parser.parse(files)
+        by_id = {sa.agent_id: sa for sa in subagents}
+        assert by_id["nometafile"].agent_type == "unknown"
+
+    def test_broken_line_warning(self):
+        parser = SubagentParser()
+        files = self._make_files()
+        subagents, warnings = parser.parse(files)
+        broken_warnings = [w for w in warnings if "JSON parse error" in w.message]
+        assert len(broken_warnings) == 1  # broken line in agent-abc123.jsonl
+
+    def test_session_id_and_project(self):
+        parser = SubagentParser()
+        files = self._make_files()
+        subagents, warnings = parser.parse(files)
+        for sa in subagents:
+            assert sa.session_id == "session-001"
+            assert sa.project == "test-project"
+
+
+# ============================================================
+# parse_all integration
+# ============================================================
+
 class TestParseAll:
     def test_end_to_end(self):
         from claude_usage_analyzer.parsers import parse_all
@@ -212,5 +302,6 @@ class TestParseAll:
         assert len(result.commands) >= 4
         assert result.stats is not None
         assert result.stats.total_sessions == 49
-        # Should have some warnings (broken lines in history + session-001)
-        assert len(result.warnings) >= 2
+        assert len(result.subagents) >= 3
+        # Should have some warnings (broken lines in history + session-001 + subagent)
+        assert len(result.warnings) >= 3

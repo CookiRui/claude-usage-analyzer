@@ -10,6 +10,7 @@ from claude_usage_analyzer.parsers.history import HistoryParser
 from claude_usage_analyzer.parsers.session_log import SessionLogParser
 from claude_usage_analyzer.parsers.session_meta import SessionMetaParser
 from claude_usage_analyzer.parsers.stats_cache import StatsCacheParser
+from claude_usage_analyzer.parsers.subagent import SubagentParser
 
 __all__ = [
     "parse_all",
@@ -19,6 +20,7 @@ __all__ = [
     "SessionLogParser",
     "SessionMetaParser",
     "StatsCacheParser",
+    "SubagentParser",
 ]
 
 
@@ -53,6 +55,12 @@ def parse_all(claude_dir: Path | str = "~/.claude") -> ParseResult:
     if logs.stats_cache:
         stats, warnings = StatsCacheParser().parse(logs.stats_cache)
         result.stats = stats
+        result.warnings.extend(warnings)
+
+    # Subagents
+    if logs.subagent_files:
+        subagents, warnings = SubagentParser().parse(logs.subagent_files)
+        result.subagents = subagents
         result.warnings.extend(warnings)
 
     return result

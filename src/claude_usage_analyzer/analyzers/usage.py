@@ -14,6 +14,8 @@ from claude_usage_analyzer.models import (
     ProjectDistribution,
     SessionOverview,
     SessionTranscript,
+    SubagentDistribution,
+    SubagentTranscript,
     TokenSummary,
 )
 
@@ -44,6 +46,8 @@ class UsageAnalyzer:
         else:
             period = ("", "")
 
+        subagents = data.subagents
+
         return AnalysisResult(
             token_summary=self._compute_token_summary(sessions),
             model_distribution=self._compute_model_distribution(sessions),
@@ -51,8 +55,10 @@ class UsageAnalyzer:
             daily_trends=self._compute_daily_trends(sessions),
             session_overviews=self._compute_session_overviews(sessions),
             hourly_distribution=self._compute_hourly_distribution(sessions),
+            subagent_distribution=self._compute_subagent_distribution(subagents),
             total_sessions=len(sessions),
             total_messages=total_messages,
+            total_subagents=len(subagents),
             analysis_period=period,
         )
 
@@ -203,4 +209,35 @@ class UsageAnalyzer:
             for h, d in hours.items()
         ]
         result.sort(key=lambda x: x.hour)
+        return result
+
+    def _compute_subagent_distribution(
+        self, subagents: list[SubagentTranscript]
+    ) -> list[SubagentDistribution]:
+        if not subagents:
+            return []
+
+        type_data: dict[str, dict] = defaultdict(
+            lambda: {"count": 0, "tokens": 0, "messages": 0}
+        )
+        for sa in subagents:
+            type_data[sa.agent_type]["count"] += 1
+            type_data[sa.agent_type]["tokens"] += sa.total_tokens.total
+            type_data[sa.agent_type]["messages"] += len(sa.messages)
+
+        grand_total = sum(d["tokens"] for d in type_data.values())
+
+        result = []
+        for agent_type, d in type_data.items():
+            pct = (d["tokens"] / grand_total * 100) if grand_total > 0 else 0.0
+            avg = d["tokens"] // d["count"] if d["count"] > 0 else 0
+            result.append(SubagentDistribution(
+                agent_type=agent_type,
+                count=d["count"],
+                total_tokens=d["tokens"],
+                avg_tokens=avg,
+                total_messages=d["messages"],
+                percentage=round(pct, 1),
+            ))
+        result.sort(key=lambda x: x.total_tokens, reverse=True)
         return result

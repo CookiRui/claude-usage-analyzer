@@ -7,6 +7,7 @@ from claude_usage_analyzer.models import (
     Message,
     ParseResult,
     SessionTranscript,
+    SubagentTranscript,
     TokenUsage,
 )
 
@@ -224,3 +225,54 @@ class TestEmptyData:
         result = UsageAnalyzer().analyze(_make_parse_result(s))
         assert result.total_sessions == 1
         assert result.total_messages == 0
+
+    def test_empty_subagents(self):
+        result = UsageAnalyzer().analyze(ParseResult())
+        assert result.subagent_distribution == []
+        assert result.total_subagents == 0
+
+
+class TestSubagentDistribution:
+    def test_groups_by_type(self):
+        sa1 = SubagentTranscript(
+            agent_id="a1", session_id="s1", project="p",
+            agent_type="Explore", description="explore",
+            total_tokens=TokenUsage(input_tokens=500, output_tokens=100),
+            messages=[],
+        )
+        sa2 = SubagentTranscript(
+            agent_id="a2", session_id="s1", project="p",
+            agent_type="Explore", description="explore again",
+            total_tokens=TokenUsage(input_tokens=300, output_tokens=50),
+            messages=[],
+        )
+        sa3 = SubagentTranscript(
+            agent_id="a3", session_id="s1", project="p",
+            agent_type="Plan", description="plan",
+            total_tokens=TokenUsage(input_tokens=1000, output_tokens=200),
+            messages=[],
+        )
+        data = ParseResult(subagents=[sa1, sa2, sa3])
+        result = UsageAnalyzer().analyze(data)
+        dist = {d.agent_type: d for d in result.subagent_distribution}
+        assert "Explore" in dist
+        assert "Plan" in dist
+        assert dist["Explore"].count == 2
+        assert dist["Plan"].count == 1
+        assert result.total_subagents == 3
+
+    def test_percentage(self):
+        sa1 = SubagentTranscript(
+            agent_id="a1", session_id="s1", project="p",
+            agent_type="Explore", description="",
+            total_tokens=TokenUsage(input_tokens=750, output_tokens=250),
+        )
+        sa2 = SubagentTranscript(
+            agent_id="a2", session_id="s1", project="p",
+            agent_type="Plan", description="",
+            total_tokens=TokenUsage(input_tokens=750, output_tokens=250),
+        )
+        data = ParseResult(subagents=[sa1, sa2])
+        result = UsageAnalyzer().analyze(data)
+        total_pct = sum(d.percentage for d in result.subagent_distribution)
+        assert abs(total_pct - 100.0) < 0.1
