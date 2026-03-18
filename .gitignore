@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Test / coverage
+.pytest_cache/
+htmlcov/
+.coverage
+
+# IDE
+.idea/
+.vs/
+.vscode/
+*.suo
+*.user
+
+# Generated
+.repo-map.json
+.repo-map.md
+
+# Logs
+*.log
+*.tmp
+*.bak

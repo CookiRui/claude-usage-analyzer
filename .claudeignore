@@ -1,0 +1,31 @@
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Dependencies
+__pycache__/
+.venv/
+venv/
+
+# IDE
+.idea/
+.vs/
+.vscode/
+*.suo
+*.user
+
+# Test / coverage
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Generated
+*.pyc
+.repo-map.json
+.repo-map.md
+
+# Logs and temp
+*.log
+*.tmp
+*.bak
