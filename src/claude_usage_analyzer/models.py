@@ -163,6 +163,7 @@ class TokenSummary:
     total_output: int = 0
     total_cache_read: int = 0
     total_cache_creation: int = 0
+    cost_usd: float = 0.0
 
     @property
     def total_all(self) -> int:
@@ -177,6 +178,7 @@ class ModelDistribution:
     session_count: int = 0
     message_count: int = 0
     percentage: float = 0.0
+    cost_usd: float = 0.0
 
 
 @dataclass
@@ -186,6 +188,7 @@ class ProjectDistribution:
     session_count: int = 0
     message_count: int = 0
     percentage: float = 0.0
+    cost_usd: float = 0.0
 
 
 @dataclass
@@ -194,6 +197,7 @@ class DailyTrend:
     total_tokens: int = 0
     session_count: int = 0
     message_count: int = 0
+    cost_usd: float = 0.0
 
 
 @dataclass
@@ -206,6 +210,7 @@ class SessionOverview:
     message_count: int = 0
     tool_call_count: int = 0
     total_tokens: int = 0
+    cost_usd: float = 0.0
 
 
 @dataclass
@@ -227,4 +232,5 @@ class AnalysisResult:
     total_sessions: int = 0
     total_messages: int = 0
     total_subagents: int = 0
+    total_cost_usd: float = 0.0
     analysis_period: tuple[str, str] = ("", "")

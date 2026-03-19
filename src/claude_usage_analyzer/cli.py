@@ -81,18 +81,21 @@ def render_rich(result: AnalysisResult, top: int = 10) -> None:
     console.print()
     console.print(f"[bold]Claude Usage Report[/bold]  ({period})")
     sub_info = f"  |  Subagents: {result.total_subagents}" if result.total_subagents else ""
-    console.print(f"Sessions: {result.total_sessions}  |  Messages: {result.total_messages}{sub_info}")
+    cost_info = f"  |  Est. Cost: ${result.total_cost_usd:,.2f}" if result.total_cost_usd else ""
+    console.print(f"Sessions: {result.total_sessions}  |  Messages: {result.total_messages}{sub_info}{cost_info}")
     console.print()
 
     # Token Summary
     t = Table(title="Token Summary")
     t.add_column("Metric", style="cyan")
     t.add_column("Tokens", justify="right", style="green")
-    t.add_row("Input", f"{ts.total_input:,}")
-    t.add_row("Output", f"{ts.total_output:,}")
-    t.add_row("Cache Read", f"{ts.total_cache_read:,}")
-    t.add_row("Cache Creation", f"{ts.total_cache_creation:,}")
-    t.add_row("[bold]Total[/bold]", f"[bold]{ts.total_all:,}[/bold]")
+    t.add_column("Est. Cost", justify="right", style="yellow")
+    t.add_row("Input", f"{ts.total_input:,}", "")
+    t.add_row("Output", f"{ts.total_output:,}", "")
+    t.add_row("Cache Read", f"{ts.total_cache_read:,}", "")
+    t.add_row("Cache Creation", f"{ts.total_cache_creation:,}", "")
+    t.add_row("[bold]Total[/bold]", f"[bold]{ts.total_all:,}[/bold]",
+              f"[bold]${ts.cost_usd:,.2f}[/bold]")
     console.print(t)
     console.print()
 
@@ -104,10 +107,12 @@ def render_rich(result: AnalysisResult, top: int = 10) -> None:
         t.add_column("Output", justify="right")
         t.add_column("Sessions", justify="right")
         t.add_column("Messages", justify="right")
-        t.add_column("%", justify="right", style="yellow")
+        t.add_column("%", justify="right")
+        t.add_column("Cost", justify="right", style="yellow")
         for m in result.model_distribution:
             t.add_row(m.model, f"{m.input_tokens:,}", f"{m.output_tokens:,}",
-                       str(m.session_count), str(m.message_count), f"{m.percentage}%")
+                       str(m.session_count), str(m.message_count), f"{m.percentage}%",
+                       f"${m.cost_usd:,.2f}")
         console.print(t)
         console.print()
 
@@ -118,10 +123,11 @@ def render_rich(result: AnalysisResult, top: int = 10) -> None:
         t.add_column("Tokens", justify="right")
         t.add_column("Sessions", justify="right")
         t.add_column("Messages", justify="right")
-        t.add_column("%", justify="right", style="yellow")
+        t.add_column("%", justify="right")
+        t.add_column("Cost", justify="right", style="yellow")
         for p in result.project_distribution:
             t.add_row(p.project, f"{p.total_tokens:,}", str(p.session_count),
-                       str(p.message_count), f"{p.percentage}%")
+                       str(p.message_count), f"{p.percentage}%", f"${p.cost_usd:,.2f}")
         console.print(t)
         console.print()
 
@@ -132,9 +138,10 @@ def render_rich(result: AnalysisResult, top: int = 10) -> None:
         t.add_column("Tokens", justify="right")
         t.add_column("Sessions", justify="right")
         t.add_column("Messages", justify="right")
+        t.add_column("Cost", justify="right", style="yellow")
         for d in result.daily_trends[-14:]:
             t.add_row(d.date, f"{d.total_tokens:,}", str(d.session_count),
-                       str(d.message_count))
+                       str(d.message_count), f"${d.cost_usd:,.2f}")
         console.print(t)
         console.print()
 
@@ -148,12 +155,13 @@ def render_rich(result: AnalysisResult, top: int = 10) -> None:
         t.add_column("Msgs", justify="right")
         t.add_column("Tools", justify="right")
         t.add_column("Tokens", justify="right", style="green")
+        t.add_column("Cost", justify="right", style="yellow")
         for s in result.session_overviews[:top]:
             dur = _format_duration(s.duration_seconds)
             sid = s.session_id[:8] + "..."
             t.add_row(sid, s.project, s.model or "", dur,
                        str(s.message_count), str(s.tool_call_count),
-                       f"{s.total_tokens:,}")
+                       f"{s.total_tokens:,}", f"${s.cost_usd:,.2f}")
         console.print(t)
         console.print()
 
